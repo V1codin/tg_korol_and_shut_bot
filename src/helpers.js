@@ -87,20 +87,11 @@ const getRandom = (max = 1, min = 0) =>
   Math.floor(Math.random() * (max - min)) + min;
 
 const getRandomLyrics = (db = lyrics) => {
-  const albums = Object.keys(db.albums);
+  const songs = db.allSongs;
 
-  const randomAlbumValue = getRandom(albums.length);
-  //console.log('albums.length: ', albums.length);
-  //console.log('randomAlbumValue: ', randomAlbumValue);
-  const albumName = albums[randomAlbumValue];
-
-  const randAlbum = db.albums[albumName];
-
-  //console.log('===================================');
-  const randomSongValue = getRandom(randAlbum.length);
-  //console.log('randAlbum.length: ', randAlbum.length);
-  //console.log('randomSongValue: ', randomSongValue);
-  const song = randAlbum[randomSongValue];
+  const randomSongValue = getRandom(songs.length);
+  //console.log('randomSongValue: ', randomSongValue)
+  const song = songs[randomSongValue];
 
   //console.log('===================================');
   const randomTextValue = getRandom(song.lyrics.length);
@@ -115,7 +106,7 @@ const getRandomLyrics = (db = lyrics) => {
   return {
     name: song.name,
     text: result,
-    album: albumName,
+    album: song.albumName,
     fullLyrics: song.lyrics,
     textIndex: randomTextValue,
   };
@@ -185,6 +176,44 @@ module.exports = {
 };
 
 /*
+
+? dep
+const getRandomLyrics = (db = lyrics) => {
+  const albums = Object.keys(db.albums);
+
+  const randomAlbumValue = getRandom(albums.length);
+  //console.log('albums.length: ', albums.length);
+  //console.log('randomAlbumValue: ', randomAlbumValue);
+  const albumName = albums[randomAlbumValue];
+
+  const randAlbum = db.albums[albumName];
+
+  //console.log('===================================');
+  const randomSongValue = getRandom(randAlbum.length);
+  //console.log('randAlbum.length: ', randAlbum.length);
+  //console.log('randomSongValue: ', randomSongValue);
+  const song = randAlbum[randomSongValue];
+
+  //console.log('===================================');
+  const randomTextValue = getRandom(song.lyrics.length);
+  //console.log('song.lyrics.length: ', song.lyrics.length);
+  //console.log('randomTextValue: ', randomTextValue);
+  const result = song.lyrics[randomTextValue];
+
+  if (!result) {
+    return getRandomLyrics();
+  }
+
+  return {
+    name: song.name,
+    text: result,
+    album: albumName,
+    fullLyrics: song.lyrics,
+    textIndex: randomTextValue,
+  };
+};
+
+
 function string2Bin(str) {
   var result = [];
   for (var i = 0; i < str.length; i++) {

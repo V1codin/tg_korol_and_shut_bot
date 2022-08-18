@@ -380,8 +380,12 @@ const init = async () => {
 
 server.listen(PORT, async () => {
   await init();
-  console.log(`Example app listening on port ${PORT}`);
+  console.log(`The app listening on port ${PORT}`);
 });
+
+setInterval(() => {
+  http.get(process.env.APP_LINK);
+}, 300000);
 
 /*
 bot.on('inline_query', () => {
