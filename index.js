@@ -1,6 +1,6 @@
 //const { request } = require('undici');
-const http = require('http');
-const server = http.createServer();
+const https = require('https');
+const server = https.createServer();
 const PORT = process.env.PORT || 3000;
 
 const TelegramBot = require('node-telegram-bot-api');
@@ -384,7 +384,7 @@ server.listen(PORT, async () => {
 });
 
 setInterval(() => {
-  http.get(process.env.APP_LINK);
+  https.get(process.env.APP_LINK);
 }, 300000);
 
 /*
