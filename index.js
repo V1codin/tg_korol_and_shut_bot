@@ -385,7 +385,7 @@ server.listen(PORT, async () => {
 
 setInterval(() => {
   https.get(process.env.APP_LINK);
-}, 300000);
+}, 180000);
 
 /*
 bot.on('inline_query', () => {
