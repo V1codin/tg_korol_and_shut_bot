@@ -384,13 +384,13 @@ app.get('/', function (req, res) {
   res.send('is alive');
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   await init();
   console.log(`The app listening on port ${PORT}`);
 });
 
 setInterval(async () => {
- await request(process.env.APP_LINK);
+  await request(process.env.APP_LINK);
 }, 300000);
 
 /*
