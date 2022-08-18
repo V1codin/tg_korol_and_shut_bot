@@ -1,12 +1,14 @@
 //const { request } = require('undici');
 const https = require('https');
-const server = https.createServer();
+const server = https.createServer().on('error', (e) => {
+  console.error('server error');
+});
 const PORT = process.env.PORT || 3000;
 
 const TelegramBot = require('node-telegram-bot-api');
 const crypto = require('crypto');
 
-const StateHandler = require('./src/state');
+//const StateHandler = require('./src/state');
 
 const {
   readFile,
