@@ -1,8 +1,8 @@
-//const { request } = require('undici');
-const https = require('https');
-const server = https.createServer().on('error', (e) => {
-  console.error('server error');
-});
+const { request } = require('undici');
+const express = require('express');
+
+const app = express();
+
 const PORT = process.env.PORT || 3000;
 
 const TelegramBot = require('node-telegram-bot-api');
@@ -380,16 +380,21 @@ const init = async () => {
   });
 };
 
-server.listen(PORT, async () => {
+app.get('/', function (req, res) {
+  res.send('is alive');
+});
+
+app.listen(PORT, () => {
   await init();
   console.log(`The app listening on port ${PORT}`);
 });
 
-setInterval(() => {
-  https.get(process.env.APP_LINK);
-}, 180000);
+setInterval(async () => {
+ await request(process.env.APP_LINK);
+}, 300000);
 
 /*
+
 bot.on('inline_query', () => {
   console.log('inline_query');
 });
