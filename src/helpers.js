@@ -2,7 +2,7 @@ const fsPromise = require('fs/promises');
 
 const lyrics = require('../db/Lyrics.json');
 
-const MAX_QUIZ_ANSWERS = 15;
+const MAX_QUIZ_ANSWERS = 25;
 const MIN_QUIZ_ANSWERS = 2;
 const DEFAULT_QUIZ_ANSWERS = 4;
 
