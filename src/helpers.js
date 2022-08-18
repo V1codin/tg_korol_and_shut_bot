@@ -100,7 +100,7 @@ const getRandomLyrics = (db = lyrics) => {
   const result = song.lyrics[randomTextValue];
 
   if (!result) {
-    return getRandomLyrics();
+    return getRandomLyrics(db);
   }
 
   return {
@@ -136,17 +136,13 @@ const startQuiz = async (answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
     },
   ];
 
-  let cachedSong = song.name;
-
   while (answers.length !== answerNumbers) {
     const randIndex = getRandom(lyrics.names.length);
     const randomSong = lyrics.names[randIndex];
 
-    if (cachedSong === randomSong) {
+    if (answers.find((element) => element.name === randomSong)) {
       continue;
     }
-
-    cachedSong = randomSong;
 
     answers.push({
       name: randomSong,
