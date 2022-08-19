@@ -3,51 +3,62 @@ const fsPromise = require('fs/promises');
 const DEFAULT_STORE = { song: {}, quiz: {} };
 
 class StateHandler {
-  constructor(filePath) {
-    this.outerFilePath = filePath;
+  #state;
 
-    this.state = null;
+  constructor(initial = DEFAULT_STORE) {
+    this.#state = initial;
   }
 
-  addToState(props) {
-    const { type, id, data } = props;
-
-    const file = this.getLocalState();
-
-    file[type][id] = data;
-
-    //await writeFile('./db/storage.json', JSON.stringify(file));
-  }
-
-  async init() {
-    this.state = await this.readState(this.outerFilePath);
-
-    return this.getLocalState();
-  }
-
-  async readState(path, cb) {
+  addToState(record) {
     try {
-      const rowData = await fsPromise.readFile(path);
+      const { type, ...res } = record;
 
-      const data = await JSON.parse(rowData);
-
-      if (typeof cb === 'function') {
-        await cb(data);
-      }
-
-      return data;
+      this.#state[type][res.id] = {
+        ...res,
+      };
     } catch (e) {
-      console.log('read file error', e);
-
-      return DEFAULT_STORE;
+      console.log('add to local state error', e);
     }
   }
 
-  getLocalState() {
-    return this.state;
+  pushToElement(type, id, prop, element) {
+    if (Array.isArray(this.getLocalState()?.[type]?.[id]?.data?.[prop])) {
+      this.#state[type][id]?.data?.[prop].push(element);
+    }
   }
 
-  async updateOuterState() {}
+  getCalledMessageCache(id) {
+    if (id) {
+      return this.getLocalState()['calledMessageCache'][id];
+    }
+    return this.getLocalState()['calledMessageCache'];
+  }
+
+  checkInCache(prop) {
+    return String(prop) in this.getCalledMessageCache();
+  }
+
+  addRequestedSongNameToCache(prop, data = true) {
+    if (this.checkInCache(prop)) {
+      this.getLocalState()['calledMessageCache'][prop] = {
+        ...this.getLocalState()['calledMessageCache'][prop],
+        ...data,
+      };
+      return;
+    }
+    this.getLocalState()['calledMessageCache'][prop] = data;
+  }
+
+  getLocalState(prop) {
+    if (prop) {
+      return this.#state[prop];
+    }
+    return this.#state;
+  }
+
+  remove(id, type = 'song') {
+    delete this.#state[type][id];
+  }
 }
 
 module.exports = StateHandler;

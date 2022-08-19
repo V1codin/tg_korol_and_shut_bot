@@ -1,29 +1,36 @@
 const { request } = require('undici');
 const express = require('express');
-const { MongoClient } = require('mongodb');
 
 const DatabaseHandler = require('./src/db');
-const app = express();
-
-const PORT = process.env.PORT || 3000;
 
 const TelegramBot = require('node-telegram-bot-api');
 const crypto = require('crypto');
 
-//const StateHandler = require('./src/state');
+const StateHandler = require('./src/state');
 
 const {
-  getQueryActions,
-  readFile,
+  getRandomSongCommand,
+  getAnekCommand,
+  getQuizCommand,
+} = require('./src/routes/bot_commands');
+
+const {
+  getQueryCommands,
   addToState,
+  getRandomLyrics,
+  startQuiz,
+  getValidQuizAnswersNumber,
+
+  readFile,
   addRequestedSongNameToCache,
   removeRequestedSongNameFromCache,
   checkRequestedSongNameInCache,
-  getRandomLyrics,
-  startQuiz,
   writeFile,
-  getValidQuizAnswersNumber,
 } = require('./src/helpers');
+
+const app = express();
+
+const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
@@ -32,11 +39,6 @@ if (process.env.NODE_ENV !== 'production') {
 const { API_TOKEN, MONGO_USER, MONGO_PW, DB_NAME } = process.env;
 
 const mongo_uri = `mongodb+srv://${MONGO_USER}:${MONGO_PW}@cluster.kw9an2x.mongodb.net/?retryWrites=true&w=majority`;
-
-const db = new DatabaseHandler(new MongoClient(mongo_uri), DB_NAME);
-
-const bot = new TelegramBot(API_TOKEN, { polling: true });
-const queryCallbacks = getQueryActions(bot);
 
 const init = async () => {
   //const state = await new StateHandler('./db/storage.json').init();
@@ -397,68 +399,39 @@ app.get('/', function (req, res) {
 });
 
 const devInit = async () => {
-  bot.on('callback_query', async (payload) => {
-    //console.log('payload: ', payload.from.first_name);
+  try {
+    const bot = new TelegramBot(API_TOKEN, { polling: true });
 
-    const [type, ...data] = payload.data.split(' ');
+    const db = await new DatabaseHandler(mongo_uri, DB_NAME).init();
 
-    payload.originCaller = data.at(-1);
+    const states = await db.getState('song', 'quiz', 'calledMessageCache');
 
-    await queryCallbacks[type]?.(payload, ...data);
-  });
+    const state = new StateHandler(states);
 
-  bot.onText(/^\/quiz@Gorshok_is_alive_Bot/, async (msg, [, , dig]) => {
-    // ? for bot chat only
-    //bot.onText(/^\/quiz$/, async (msg, [, match]) => {
-    const chatId = msg.chat.id;
-    try {
-      await bot.sendMessage(chatId, 'Кипит разработка');
-    } catch (e) {
-      console.log('quiz error', e);
-    }
-  });
+    const queryCallbacks = getQueryCommands(bot, state, db);
 
-  bot.onText(/^\/random(@Gorshok_is_alive_Bot)/, async (msg, [, match]) => {
-    //? for bot chat only
-    //bot.onText(/^\/random$/, (msg, [, match]) => {
-    const chatId = msg.chat.id;
-    try {
-      await bot.sendMessage(chatId, 'Кипит разработка');
-    } catch (e) {
-      console.log('random song error');
-      bot.sendMessage(
-        chatId,
-        'У ботов тоже есть право на отдых. Я сейчас воспользуюсь этим правом',
-      );
-    }
-  });
+    bot.on('callback_query', async (payload) => {
+      //console.log('payload: ', payload.from.first_name);
 
-  bot.onText(/^\/anekdot(@Gorshok_is_alive_Bot)/, async (msg, [, match]) => {
-    try {
-      await bot.sendMessage(chatId, 'Кипит разработка');
-    } catch (e) {
-      console.log('anekdot error');
-    }
-  });
+      const [type, ...data] = payload.data.split(' ');
 
-  bot.on('polling_error', (error) => {
-    console.log('polling_error', error.code);
+      await queryCallbacks[type]?.(payload, ...data);
+    });
 
-    bot.startPolling({ restart: true });
-  });
+    bot.onText(...getQuizCommand(bot, db, state));
 
-  bot.onText(/^\/random$/, async (msg, [, match]) => {
-    const chatId = msg.chat.id;
-    try {
-      await bot.sendMessage(chatId, 'ЭЙ!');
-    } catch (e) {
-      console.log('random song error');
-      bot.sendMessage(
-        chatId,
-        'У ботов тоже есть право на отдых. Я сейчас воспользуюсь этим правом',
-      );
-    }
-  });
+    bot.onText(...getRandomSongCommand(bot, db, state));
+
+    bot.onText(...getAnekCommand(bot, db, state));
+
+    bot.on('polling_error', (error) => {
+      console.log('polling_error', error.code);
+
+      bot.startPolling({ restart: true });
+    });
+  } catch (e) {
+    console.log('init error', e);
+  }
 };
 
 app.listen(PORT, async () => {
@@ -468,7 +441,6 @@ app.listen(PORT, async () => {
   console.log(`The app listening on port ${PORT}`);
 });
 
-// ! mongodb+srv://wers32:<password>@cluster.kw9an2x.mongodb.net/?retryWrites=true&w=majority
 /*
 setInterval(async () => {
   await request(process.env.APP_LINK);

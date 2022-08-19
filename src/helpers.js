@@ -86,21 +86,14 @@ const checkRequestedSongNameInCache = async (prop) => {
 const getRandom = (max = 1, min = 0) =>
   Math.floor(Math.random() * (max - min)) + min;
 
-const getRandomLyrics = (db = lyrics) => {
-  const songs = db.allSongs;
-
-  const randomSongValue = getRandom(songs.length);
-  //console.log('randomSongValue: ', randomSongValue)
-  const song = songs[randomSongValue];
-
-  //console.log('===================================');
+const getRandomLyrics = (song) => {
   const randomTextValue = getRandom(song.lyrics.length);
   //console.log('song.lyrics.length: ', song.lyrics.length);
   //console.log('randomTextValue: ', randomTextValue);
   const result = song.lyrics[randomTextValue];
 
   if (!result) {
-    return getRandomLyrics(db);
+    return getRandomLyrics(song);
   }
 
   return {
@@ -126,9 +119,7 @@ const getValidQuizAnswersNumber = (str) => {
   return number;
 };
 
-const startQuiz = async (answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
-  const song = await getRandomLyrics();
-
+const startQuiz = (song, answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
   const answers = [
     {
       name: song.name,
@@ -158,9 +149,9 @@ const startQuiz = async (answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
   };
 };
 
-const getQueryActions = (bot) => {
+const getQueryCommands = (bot, localStorage, db) => {
   return {
-    rem: async (payload, songTextId) => {
+    remsong: async (payload, actionId) => {
       try {
         const {
           message: {
@@ -172,29 +163,62 @@ const getQueryActions = (bot) => {
         const chatId = id;
         const songNameId = message_id;
 
-        await bot.deleteMessage(chatId, songTextId);
-        await bot.deleteMessage(chatId, songNameId);
-        await removeRequestedSongNameFromCache(songTextId);
+        const recordToRemove = localStorage.getCalledMessageCache();
 
-        if (payload.originCaller !== songTextId) {
+        await bot.deleteMessage(chatId, actionId);
+        await bot.deleteMessage(chatId, songNameId);
+
+        if (recordToRemove[actionId].callerId !== actionId) {
           // ? only for bot that is admin in group
-          await bot.deleteMessage(chatId, payload.originCaller);
+          await bot.deleteMessage(chatId, recordToRemove[actionId].callerId);
         }
+
+        const removedCache = await db.remove(
+          Number(actionId),
+          'calledMessageCache',
+        );
+
+        if (removedCache.deletedCount) {
+          localStorage.remove(actionId, 'calledMessageCache');
+        }
+      } catch (e) {
+        console.log('remove song callback_query', e);
+        throw new Error('remove song callback_query');
+      }
+    },
+    rem: async (payload, messageId) => {
+      try {
+        const {
+          message: {
+            message_id,
+            chat: { id },
+          },
+        } = payload;
+
+        const chatId = id;
+        const songNameId = message_id;
+
+        await bot.deleteMessage(chatId, songNameId);
+        await bot.deleteMessage(chatId, messageId);
       } catch (e) {
         console.log('remove messages callback_query');
       }
     },
-    song: async (payload, id) => {
-      if (await checkRequestedSongNameInCache(payload.message.message_id)) {
+    song: async (payload, id, callerId) => {
+      if (localStorage.checkInCache(payload.message.message_id)) {
+        bot.answerCallbackQuery(payload.id, {
+          text: `${payload.from.first_name}, это ты уже жмякал`,
+        });
+        console.log('there is in cache! (song)');
         return;
       }
 
       try {
         const chatId = payload.message.chat.id;
 
-        const file = await readFile('./db/storage.json');
+        const file = localStorage.getLocalState();
 
-        [songName, album] = file['song'][id];
+        [songName, album] = file['song'][id].data;
 
         await bot.sendMessage(chatId, songName, {
           reply_to_message_id: payload.message.message_id,
@@ -203,49 +227,34 @@ const getQueryActions = (bot) => {
               [
                 {
                   text: 'Удалить сообщения с этой песней',
-                  callback_data: `rem ${payload.message.message_id} ${payload.originCaller}`,
+                  callback_data: `remsong ${payload.message.message_id}`,
                 },
               ],
             ],
           },
         });
 
-        //delete file['song'][id];
+        const isRemoved = await db.remove(id);
+        if (isRemoved.deletedCount) {
+          localStorage.remove(id);
 
-        //await writeFile('./db/storage.json', JSON.stringify(file));
+          const cachedData = {
+            type: 'calledMessageCache',
+            id: payload.message.message_id,
+            callerId,
+          };
 
-        await addRequestedSongNameToCache(payload.message.message_id);
+          const record = await db.addToState(cachedData);
+
+          localStorage.addRequestedSongNameToCache(
+            payload.message.message_id,
+            record,
+          );
+        }
+
         console.log('callback_query');
       } catch (e) {
-        console.log('song callback_query error');
-      }
-    },
-    anek: async (payload) => {
-      if (await checkRequestedSongNameInCache(payload.message.message_id)) {
-        return;
-      }
-
-      try {
-        const chatId = payload.message.chat.id;
-
-        await bot.sendPhoto(chatId, './src/assets/images/anek_1.PNG', {
-          reply_to_message_id: payload.message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: 'Удалить анекдот',
-                  callback_data: `rem ${payload.message.message_id} ${payload.originCaller}`,
-                },
-              ],
-            ],
-          },
-        });
-
-        await addRequestedSongNameToCache(payload.message.message_id);
-        console.log('callback_query');
-      } catch (e) {
-        console.log('anek callback_query error');
+        console.log('song callback_query error', e);
       }
     },
     quiz: async (payload, ...data) => {
@@ -263,10 +272,7 @@ const getQueryActions = (bot) => {
 
       const identifier = data[1];
 
-      if (
-        (await checkRequestedSongNameInCache(cachedId)) &&
-        identifier !== '-1'
-      ) {
+      if (localStorage.checkInCache(cachedId) && identifier !== '-1') {
         bot.answerCallbackQuery(payload.id, {
           text: `${first_name}, гусяра, ты уже голосовал`,
         });
@@ -274,22 +280,28 @@ const getQueryActions = (bot) => {
       }
 
       try {
-        const storage = await readFile('./db/storage.json');
+        const storage = localStorage.getLocalState('quiz');
 
         const quizId = data[0];
 
-        const quiz = storage.quiz[quizId];
+        const quiz = storage[quizId]?.data;
 
         if ((!quiz && identifier !== '-1') || (!quiz && identifier === '-1')) {
           throw new Error('');
         }
 
         if (identifier === '-1') {
-          delete storage.quiz[quizId];
+          const removedCache = await db.remove(quizId, 'quiz');
 
-          await writeFile('./db/storage.json', JSON.stringify(storage));
+          if (removedCache.deletedCount) {
+            localStorage.remove(quizId, 'quiz');
 
-          await removeRequestedSongNameFromCache(cachedId);
+            const record = await db.remove(cachedId, 'calledMessageCache');
+
+            if (record.deletedCount) {
+              localStorage.remove(cachedId, 'calledMessageCache');
+            }
+          }
 
           if (!quiz.repliers.length) {
             await bot.sendMessage(
@@ -338,19 +350,36 @@ const getQueryActions = (bot) => {
           return;
         }
 
-        storage.quiz[quizId].repliers.push({
-          replierName: first_name,
-          isCorrect: quiz.answers[Number(identifier)].isTrue,
-        });
+        const toPush = [
+          'quiz',
+          quizId,
+          'repliers',
+          {
+            replierName: first_name,
+            isCorrect: quiz.answers[Number(identifier)].isTrue,
+          },
+        ];
+
+        const updated = await db.pushElement(...toPush);
+
+        if (updated.modifiedCount) {
+          localStorage.pushToElement(...toPush);
+        }
 
         bot.answerCallbackQuery(payload.id, {
           text: `${first_name}, голос засчитан`,
         });
 
-        await writeFile('./db/storage.json', JSON.stringify(storage));
-        await addRequestedSongNameToCache(cachedId);
+        const cachedData = {
+          type: 'calledMessageCache',
+          id: cachedId,
+        };
+
+        const record = await db.addToState(cachedData);
+
+        localStorage.addRequestedSongNameToCache(cachedId, record);
       } catch (e) {
-        console.log('quiz callback_query');
+        console.log('quiz callback_query error');
 
         bot.answerCallbackQuery(payload.id, { text: 'Опрос закрыт' });
       }
@@ -358,8 +387,18 @@ const getQueryActions = (bot) => {
   };
 };
 
+const getDate = () => {
+  const tzoffset = new Date().getTimezoneOffset() * 60000;
+  const localISOTime = new Date(Date.now() - tzoffset)
+    .toISOString()
+    .slice(0, -1);
+
+  return localISOTime;
+};
+
 module.exports = {
-  getQueryActions,
+  getDate,
+  getQueryCommands,
   readFile,
   writeFile,
   addToState,
@@ -373,6 +412,34 @@ module.exports = {
 };
 
 /*
+
+
+? dep
+const getRandomLyrics = (db = lyrics) => {
+  const songs = db.allSongs;
+
+  const randomSongValue = getRandom(songs.length);
+  //console.log('randomSongValue: ', randomSongValue)
+  const song = songs[randomSongValue];
+
+  //console.log('===================================');
+  const randomTextValue = getRandom(song.lyrics.length);
+  //console.log('song.lyrics.length: ', song.lyrics.length);
+  //console.log('randomTextValue: ', randomTextValue);
+  const result = song.lyrics[randomTextValue];
+
+  if (!result) {
+    return getRandomLyrics(db);
+  }
+
+  return {
+    name: song.name,
+    text: result,
+    album: song.albumName,
+    fullLyrics: song.lyrics,
+    textIndex: randomTextValue,
+  };
+};
 
 ? dep
 const getRandomLyrics = (db = lyrics) => {
