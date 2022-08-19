@@ -366,7 +366,7 @@ const getQuizMessage = (songName, voted = 0) => {
   <b>${songName}</b>
   
   Проголосовал${voted > 1 ? 'о' : ''}: <i>${voted}</i> ${
-    voted > 1 ? 'человечков' : 'человечек'
+    voted > 1 || voted === 0 ? 'человечков' : 'человечек'
   }
   `;
 };
