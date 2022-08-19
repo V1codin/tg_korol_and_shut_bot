@@ -21,7 +21,7 @@ class DatabaseHandler extends MongoClient {
         console.log('db close event');
       });
 
-      this.stream = await super.connect();
+      this.stream = await this.connect();
 
       this.database = this.stream.db(this.dbName);
 
