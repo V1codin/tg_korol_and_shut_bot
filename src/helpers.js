@@ -206,7 +206,7 @@ const getQueryCommands = (bot, localStorage, db) => {
 
       const callerId = payload.from.id;
 
-      const cachedId = String(message_id) + callerId;
+      const cachedId = String(message_id) + '+' + callerId;
 
       const identifier = data[1];
 
@@ -236,7 +236,7 @@ const getQueryCommands = (bot, localStorage, db) => {
             localStorage.remove(quizId, 'quiz');
             localStorage.remove(quizId, 'markups');
 
-            const reg = new RegExp(`^${message_id}\\d{0,}$`);
+            const reg = new RegExp(`^${message_id}\\+\\d{1,}$`);
 
             const record = await db.removeMany(reg, 'calledMessageCache');
 
