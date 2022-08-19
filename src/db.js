@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
 
 class DatabaseHandler extends MongoClient {
   constructor(uri, dbName = 'bot_db') {
@@ -21,7 +21,7 @@ class DatabaseHandler extends MongoClient {
         console.log('db close event');
       });
 
-      this.stream = await this.connect();
+      this.stream = await super.connect();
 
       this.database = this.stream.db(this.dbName);
 
