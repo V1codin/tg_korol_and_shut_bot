@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb';
+const { MongoClient } = require('mongodb');
 
 class DatabaseHandler extends MongoClient {
   constructor(uri, dbName = 'bot_db') {
