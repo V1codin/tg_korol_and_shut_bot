@@ -5,6 +5,7 @@ const {
   getValidQuizAnswersNumber,
   getRandomLyrics,
   startQuiz,
+  getQuizMessage,
 } = require('../helpers');
 
 const getRandomSongCommand = (bot, dbHandler, localState) => {
@@ -135,29 +136,39 @@ const getQuizCommand = (bot, dbHandler, localState) => {
             },
           ];
         });
-
-        await bot.sendMessage(
-          chatId,
-          `СТАРТУЕМ:\n
-      <b>${songText}</b>
-      `,
-          {
-            reply_to_message_id: callerMessageId,
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                ...songAnswerKeys,
-                [
-                  {
-                    text: 'Итог',
-                    callback_data: `quiz ${id} -1`,
-                  },
-                ],
+        const markup = {
+          reply_to_message_id: callerMessageId,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              ...songAnswerKeys,
+              [
+                {
+                  text: 'Итог',
+                  callback_data: `quiz ${id} -1`,
+                },
               ],
-              remove_keyboard: true,
-            },
+            ],
+            remove_keyboard: true,
           },
-        );
+        };
+
+        const addToDb = {
+          type: 'markups',
+          markup,
+          text: getQuizMessage(songText),
+          songText,
+          id,
+        };
+
+        const addedMarkup = await dbHandler.addToState(addToDb);
+
+        localState.addToState({
+          type: 'markups',
+          addedMarkup,
+        });
+
+        await bot.sendMessage(chatId, addToDb.text, markup);
       } catch (e) {
         console.log('quiz error', e);
         bot.sendMessage(

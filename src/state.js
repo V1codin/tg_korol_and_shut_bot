@@ -1,4 +1,9 @@
-const DEFAULT_STORE = { song: {}, quiz: {}, calledMessageCache: {} };
+const DEFAULT_STORE = {
+  song: {},
+  quiz: {},
+  calledMessageCache: {},
+  markups: {},
+};
 
 class StateHandler {
   #state;

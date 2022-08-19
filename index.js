@@ -37,7 +37,12 @@ const init = async () => {
 
     const db = await new DatabaseHandler(mongo_uri, DB_NAME).init();
 
-    const states = await db.getState('song', 'quiz', 'calledMessageCache');
+    const states = await db.getState(
+      'song',
+      'quiz',
+      'calledMessageCache',
+      'markups',
+    );
 
     const state = new StateHandler(states);
 

@@ -230,9 +230,11 @@ const getQueryCommands = (bot, localStorage, db) => {
 
         if (identifier === '-1') {
           const removedCache = await db.remove(quizId, 'quiz');
+          const removedMarkup = await db.remove(quizId, 'markups');
 
-          if (removedCache.deletedCount) {
+          if (removedCache.deletedCount && removedMarkup.deletedCount) {
             localStorage.remove(quizId, 'quiz');
+            localStorage.remove(quizId, 'markups');
 
             const record = await db.remove(cachedId, 'calledMessageCache');
 
@@ -304,6 +306,17 @@ const getQueryCommands = (bot, localStorage, db) => {
           localStorage.pushToElement(...toPush);
         }
 
+        const markupRecord = await db.getMarkup(quizId);
+        const voted = await db.getVotedNumber(quizId);
+
+        const newText = getQuizMessage(markupRecord.songText, voted);
+
+        bot.editMessageText(newText, {
+          chat_id: id,
+          message_id,
+          ...markupRecord.markup,
+        });
+
         bot.answerCallbackQuery(payload.id, {
           text: `${first_name}, голос засчитан`,
         });
@@ -322,6 +335,20 @@ const getQueryCommands = (bot, localStorage, db) => {
         bot.answerCallbackQuery(payload.id, { text: 'Опрос закрыт' });
       }
     },
+    edit: async (payload) => {
+      console.log('payload: ', payload);
+      const {
+        message: {
+          message_id,
+          chat: { id },
+        },
+      } = payload;
+
+      bot.editMessageText('allo', {
+        chat_id: id,
+        message_id,
+      });
+    },
   };
 };
 
@@ -334,12 +361,21 @@ const getDate = () => {
   return localISOTime;
 };
 
+const getQuizMessage = (songName, voted = 0) => {
+  return `СТАРТУЕМ:\n
+  <b>${songName}</b>
+  
+  Проголосовало: <i>${voted}</i> человечков
+  `;
+};
+
 module.exports = {
   getDate,
   getQueryCommands,
   getRandomLyrics,
   startQuiz,
   getValidQuizAnswersNumber,
+  getQuizMessage,
 };
 
 /*

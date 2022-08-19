@@ -31,6 +31,19 @@ class DatabaseHandler extends MongoClient {
     }
   }
 
+  async getMarkup(id) {
+    try {
+      const record = await this.stream.database
+        .collection('markups')
+        .findOne({ id });
+
+      return record;
+    } catch (e) {
+      console.log('get markup from db error', e);
+      throw new Error('from get markup from db error');
+    }
+  }
+
   async addToState(props) {
     const { type, ...res } = props;
 
@@ -124,6 +137,19 @@ class DatabaseHandler extends MongoClient {
     } catch (e) {
       console.log('push to record', e);
       throw new Error('from push to record');
+    }
+  }
+
+  async getVotedNumber(id) {
+    try {
+      const record = await this.stream.database
+        .collection('quiz')
+        .findOne({ id });
+
+      return record.data.repliers.length;
+    } catch (e) {
+      console.log('get voted number', e);
+      throw new Error('from get voted number');
     }
   }
 }
