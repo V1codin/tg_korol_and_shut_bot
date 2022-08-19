@@ -144,7 +144,7 @@ const getQueryCommands = (bot, localStorage, db) => {
     },
     song: async (payload, id, callerId) => {
       if (localStorage.checkInCache(payload.message.message_id)) {
-        bot.answerCallbackQuery(payload.id, {
+        await bot.answerCallbackQuery(payload.id, {
           text: `${payload.from.first_name}, это ты уже жмякал`,
         });
         console.log('there is in cache! (song)');
@@ -211,7 +211,7 @@ const getQueryCommands = (bot, localStorage, db) => {
       const identifier = data[1];
 
       if (localStorage.checkInCache(cachedId) && identifier !== '-1') {
-        bot.answerCallbackQuery(payload.id, {
+        await bot.answerCallbackQuery(payload.id, {
           text: `${first_name}, гусяра, ты уже голосовал`,
         });
         return;
@@ -311,13 +311,13 @@ const getQueryCommands = (bot, localStorage, db) => {
 
         const newText = getQuizMessage(markupRecord.songText, voted);
 
-        bot.editMessageText(newText, {
+        await bot.editMessageText(newText, {
           chat_id: id,
           message_id,
           ...markupRecord.markup,
         });
 
-        bot.answerCallbackQuery(payload.id, {
+        await bot.answerCallbackQuery(payload.id, {
           text: `${first_name}, голос засчитан`,
         });
 
@@ -332,7 +332,7 @@ const getQueryCommands = (bot, localStorage, db) => {
       } catch (e) {
         console.log('quiz callback_query error');
 
-        bot.answerCallbackQuery(payload.id, { text: 'Опрос закрыт' });
+        await bot.answerCallbackQuery(payload.id, { text: 'Опрос закрыт' });
       }
     },
     edit: async (payload) => {
@@ -344,7 +344,7 @@ const getQueryCommands = (bot, localStorage, db) => {
         },
       } = payload;
 
-      bot.editMessageText('allo', {
+      await bot.editMessageText('allo', {
         chat_id: id,
         message_id,
       });
