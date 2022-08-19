@@ -5,13 +5,6 @@ const {
   getValidQuizAnswersNumber,
   getRandomLyrics,
   startQuiz,
-
-  readFile,
-  addToState,
-  addRequestedSongNameToCache,
-  removeRequestedSongNameFromCache,
-  checkRequestedSongNameInCache,
-  writeFile,
 } = require('../helpers');
 
 const getRandomSongCommand = (bot, dbHandler, localState) => {

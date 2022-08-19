@@ -1,6 +1,4 @@
-const fsPromise = require('fs/promises');
-
-const DEFAULT_STORE = { song: {}, quiz: {} };
+const DEFAULT_STORE = { song: {}, quiz: {}, calledMessageCache: {} };
 
 class StateHandler {
   #state;
