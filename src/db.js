@@ -152,6 +152,21 @@ class DatabaseHandler extends MongoClient {
       throw new Error('from get voted number');
     }
   }
+
+  async removeMany(id, type) {
+    try {
+      const collection = this.stream.database.collection(type);
+
+      const result = await collection.deleteMany({
+        id: { $regex: id },
+      });
+
+      return result;
+    } catch (e) {
+      console.log('remove many records', e);
+      throw new Error('from many records');
+    }
+  }
 }
 
 module.exports = DatabaseHandler;

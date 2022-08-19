@@ -62,6 +62,16 @@ class StateHandler {
   remove(id, type = 'song') {
     delete this.#state[type][id];
   }
+
+  removeMany(id, type = 'song') {
+    const keys = Object.keys(this.#state[type]);
+
+    keys.forEach((key) => {
+      if (id.test(key)) {
+        delete this.#state[type][key];
+      }
+    });
+  }
 }
 
 module.exports = StateHandler;
