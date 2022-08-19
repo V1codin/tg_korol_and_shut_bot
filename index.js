@@ -1,6 +1,8 @@
 const { request } = require('undici');
 const express = require('express');
+const { MongoClient } = require('mongodb');
 
+const DatabaseHandler = require('./src/db');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -11,6 +13,7 @@ const crypto = require('crypto');
 //const StateHandler = require('./src/state');
 
 const {
+  getQueryActions,
   readFile,
   addToState,
   addRequestedSongNameToCache,
@@ -26,11 +29,19 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
-const { API_TOKEN } = process.env;
+const { API_TOKEN, MONGO_USER, MONGO_PW, DB_NAME } = process.env;
+
+const mongo_uri = `mongodb+srv://${MONGO_USER}:${MONGO_PW}@cluster.kw9an2x.mongodb.net/?retryWrites=true&w=majority`;
+
+const db = new DatabaseHandler(new MongoClient(mongo_uri), DB_NAME);
+
+const bot = new TelegramBot(API_TOKEN, { polling: true });
+const queryCallbacks = getQueryActions(bot);
 
 const init = async () => {
   //const state = await new StateHandler('./db/storage.json').init();
 
+  /*
   const bot = new TelegramBot(API_TOKEN, { polling: true });
 
   const queryCallbacks = {
@@ -230,6 +241,7 @@ const init = async () => {
       }
     },
   };
+  */
 
   bot.on('callback_query', async (payload) => {
     //console.log('payload: ', payload.from.first_name);
@@ -384,16 +396,84 @@ app.get('/', function (req, res) {
   res.send('is alive');
 });
 
+const devInit = async () => {
+  bot.on('callback_query', async (payload) => {
+    //console.log('payload: ', payload.from.first_name);
+
+    const [type, ...data] = payload.data.split(' ');
+
+    payload.originCaller = data.at(-1);
+
+    await queryCallbacks[type]?.(payload, ...data);
+  });
+
+  bot.onText(/^\/quiz@Gorshok_is_alive_Bot/, async (msg, [, , dig]) => {
+    // ? for bot chat only
+    //bot.onText(/^\/quiz$/, async (msg, [, match]) => {
+    const chatId = msg.chat.id;
+    try {
+      await bot.sendMessage(chatId, 'Кипит разработка');
+    } catch (e) {
+      console.log('quiz error', e);
+    }
+  });
+
+  bot.onText(/^\/random(@Gorshok_is_alive_Bot)/, async (msg, [, match]) => {
+    //? for bot chat only
+    //bot.onText(/^\/random$/, (msg, [, match]) => {
+    const chatId = msg.chat.id;
+    try {
+      await bot.sendMessage(chatId, 'Кипит разработка');
+    } catch (e) {
+      console.log('random song error');
+      bot.sendMessage(
+        chatId,
+        'У ботов тоже есть право на отдых. Я сейчас воспользуюсь этим правом',
+      );
+    }
+  });
+
+  bot.onText(/^\/anekdot(@Gorshok_is_alive_Bot)/, async (msg, [, match]) => {
+    try {
+      await bot.sendMessage(chatId, 'Кипит разработка');
+    } catch (e) {
+      console.log('anekdot error');
+    }
+  });
+
+  bot.on('polling_error', (error) => {
+    console.log('polling_error', error.code);
+
+    bot.startPolling({ restart: true });
+  });
+
+  bot.onText(/^\/random$/, async (msg, [, match]) => {
+    const chatId = msg.chat.id;
+    try {
+      await bot.sendMessage(chatId, 'ЭЙ!');
+    } catch (e) {
+      console.log('random song error');
+      bot.sendMessage(
+        chatId,
+        'У ботов тоже есть право на отдых. Я сейчас воспользуюсь этим правом',
+      );
+    }
+  });
+};
+
 app.listen(PORT, async () => {
-  await init();
+  //await init();
+
+  await devInit();
   console.log(`The app listening on port ${PORT}`);
 });
 
+// ! mongodb+srv://wers32:<password>@cluster.kw9an2x.mongodb.net/?retryWrites=true&w=majority
+/*
 setInterval(async () => {
   await request(process.env.APP_LINK);
 }, 300000);
 
-/*
 
 bot.on('inline_query', () => {
   console.log('inline_query');

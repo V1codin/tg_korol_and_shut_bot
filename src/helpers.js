@@ -158,7 +158,208 @@ const startQuiz = async (answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
   };
 };
 
+const getQueryActions = (bot) => {
+  return {
+    rem: async (payload, songTextId) => {
+      try {
+        const {
+          message: {
+            message_id,
+            chat: { id },
+          },
+        } = payload;
+
+        const chatId = id;
+        const songNameId = message_id;
+
+        await bot.deleteMessage(chatId, songTextId);
+        await bot.deleteMessage(chatId, songNameId);
+        await removeRequestedSongNameFromCache(songTextId);
+
+        if (payload.originCaller !== songTextId) {
+          // ? only for bot that is admin in group
+          await bot.deleteMessage(chatId, payload.originCaller);
+        }
+      } catch (e) {
+        console.log('remove messages callback_query');
+      }
+    },
+    song: async (payload, id) => {
+      if (await checkRequestedSongNameInCache(payload.message.message_id)) {
+        return;
+      }
+
+      try {
+        const chatId = payload.message.chat.id;
+
+        const file = await readFile('./db/storage.json');
+
+        [songName, album] = file['song'][id];
+
+        await bot.sendMessage(chatId, songName, {
+          reply_to_message_id: payload.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Удалить сообщения с этой песней',
+                  callback_data: `rem ${payload.message.message_id} ${payload.originCaller}`,
+                },
+              ],
+            ],
+          },
+        });
+
+        //delete file['song'][id];
+
+        //await writeFile('./db/storage.json', JSON.stringify(file));
+
+        await addRequestedSongNameToCache(payload.message.message_id);
+        console.log('callback_query');
+      } catch (e) {
+        console.log('song callback_query error');
+      }
+    },
+    anek: async (payload) => {
+      if (await checkRequestedSongNameInCache(payload.message.message_id)) {
+        return;
+      }
+
+      try {
+        const chatId = payload.message.chat.id;
+
+        await bot.sendPhoto(chatId, './src/assets/images/anek_1.PNG', {
+          reply_to_message_id: payload.message.message_id,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Удалить анекдот',
+                  callback_data: `rem ${payload.message.message_id} ${payload.originCaller}`,
+                },
+              ],
+            ],
+          },
+        });
+
+        await addRequestedSongNameToCache(payload.message.message_id);
+        console.log('callback_query');
+      } catch (e) {
+        console.log('anek callback_query error');
+      }
+    },
+    quiz: async (payload, ...data) => {
+      const {
+        from: { first_name },
+        message: {
+          message_id,
+          chat: { id },
+        },
+      } = payload;
+
+      const callerId = payload.from.id;
+
+      const cachedId = message_id + callerId;
+
+      const identifier = data[1];
+
+      if (
+        (await checkRequestedSongNameInCache(cachedId)) &&
+        identifier !== '-1'
+      ) {
+        bot.answerCallbackQuery(payload.id, {
+          text: `${first_name}, гусяра, ты уже голосовал`,
+        });
+        return;
+      }
+
+      try {
+        const storage = await readFile('./db/storage.json');
+
+        const quizId = data[0];
+
+        const quiz = storage.quiz[quizId];
+
+        if ((!quiz && identifier !== '-1') || (!quiz && identifier === '-1')) {
+          throw new Error('');
+        }
+
+        if (identifier === '-1') {
+          delete storage.quiz[quizId];
+
+          await writeFile('./db/storage.json', JSON.stringify(storage));
+
+          await removeRequestedSongNameFromCache(cachedId);
+
+          if (!quiz.repliers.length) {
+            await bot.sendMessage(
+              id,
+              `Никто правильно не ответил. Правильный ответ:\n<b>${quiz.songName}</b>`,
+              {
+                reply_to_message_id: message_id,
+                parse_mode: 'HTML',
+              },
+            );
+
+            return;
+          }
+
+          const winner =
+            quiz?.repliers.filter((el) => el.isCorrect === true) || [];
+
+          const losers =
+            quiz?.repliers.filter((el) => el.isCorrect !== true) || [];
+
+          const resultMessage =
+            winner.length && winner.length < 2
+              ? `${winner[0].replierName} дохуя умный.`
+              : winner.length
+              ? `${winner.reduce(
+                  (ac, { replierName }) => (ac += `${replierName}, `),
+                  '',
+                )}что-то знают`
+              : 'Никто правильно не ответил';
+
+          const losersMessage = losers.length
+            ? `\n${losers.reduce(
+                (ac, { replierName }) => (ac += `${replierName}, `),
+                '',
+              )}это же база!`
+            : '';
+
+          await bot.sendMessage(
+            id,
+            `${resultMessage}\nПравильный ответ: ${quiz.songName}\n${losersMessage}`,
+            {
+              reply_to_message_id: message_id,
+            },
+          );
+
+          return;
+        }
+
+        storage.quiz[quizId].repliers.push({
+          replierName: first_name,
+          isCorrect: quiz.answers[Number(identifier)].isTrue,
+        });
+
+        bot.answerCallbackQuery(payload.id, {
+          text: `${first_name}, голос засчитан`,
+        });
+
+        await writeFile('./db/storage.json', JSON.stringify(storage));
+        await addRequestedSongNameToCache(cachedId);
+      } catch (e) {
+        console.log('quiz callback_query');
+
+        bot.answerCallbackQuery(payload.id, { text: 'Опрос закрыт' });
+      }
+    },
+  };
+};
+
 module.exports = {
+  getQueryActions,
   readFile,
   writeFile,
   addToState,
