@@ -29,24 +29,17 @@ const getNextSongLyricsLine = (lyricsArr, index) => {
     return lyricsArr[0];
   }
 
-  if (!lyricsArr[index + 1]) {
-    return getNextSongLyricsLine(lyricsArr, index + 1);
-  }
-
   return lyricsArr[index];
 };
 
 const getRandomLyrics = (song) => {
-  const randomTextValue = getRandom(song.lyrics.length);
+  const filtered = song.lyrics.filter((item) => item !== '');
+  const randomTextValue = getRandom(filtered.length - 1);
   //console.log('song.lyrics.length: ', song.lyrics.length);
   //console.log('randomTextValue: ', randomTextValue);
-  const result = song.lyrics[randomTextValue];
+  const result = filtered[randomTextValue];
 
-  if (!result) {
-    return getRandomLyrics(song);
-  }
-
-  const nextLine = getNextSongLyricsLine(song.lyrics, randomTextValue + 1);
+  const nextLine = getNextSongLyricsLine(filtered, randomTextValue + 1);
 
   return {
     name: song.name,
