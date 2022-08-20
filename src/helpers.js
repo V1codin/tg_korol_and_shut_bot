@@ -329,8 +329,8 @@ const getQueryCommands = (bot, localStorage, db) => {
 
         const newText = getQuizMessage({
           songText: markupRecord.songText,
-          nextLine: markupRecord.nextLine,
           votes: voted,
+          nextLine: markupRecord.nextLine,
         });
 
         await bot.editMessageText(newText, {
