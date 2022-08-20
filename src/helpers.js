@@ -329,6 +329,7 @@ const getQueryCommands = (bot, localStorage, db) => {
 
         const newText = getQuizMessage({
           songText: markupRecord.songText,
+          nextLine: markupRecord.nextLine,
           votes: voted,
         });
 
