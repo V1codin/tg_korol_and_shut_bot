@@ -110,7 +110,7 @@ const getQuizCommand = (bot, dbHandler, localState) => {
 
         const song = getRandomLyrics(songRecord);
 
-        const { songName, songText, answers, repliers } = startQuiz(
+        const { songName, songText, answers, repliers, nextLine } = startQuiz(
           song,
           numberOfAnswers,
         );
@@ -120,7 +120,7 @@ const getQuizCommand = (bot, dbHandler, localState) => {
         const quizRecord = await dbHandler.addToState({
           type,
           id,
-          data: { songName, songText, answers, repliers },
+          data: { songName, songText, answers, repliers, nextLine },
         });
 
         localState.addToState({
@@ -156,7 +156,7 @@ const getQuizCommand = (bot, dbHandler, localState) => {
         const addToDb = {
           type: 'markups',
           markup,
-          text: getQuizMessage(songText),
+          text: getQuizMessage({ songText, nextLine }),
           songText,
           id,
         };

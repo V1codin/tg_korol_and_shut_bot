@@ -24,6 +24,18 @@ const shuffle = (array) => {
 const getRandom = (max = 1, min = 0) =>
   Math.floor(Math.random() * (max - min)) + min;
 
+const getNextSongLyricsLine = (lyricsArr, index) => {
+  if (index >= lyricsArr.length) {
+    return lyricsArr[0];
+  }
+
+  if (!lyricsArr[index + 1]) {
+    return getNextSongLyricsLine(lyricsArr, index + 1);
+  }
+
+  return lyricsArr[index];
+};
+
 const getRandomLyrics = (song) => {
   const randomTextValue = getRandom(song.lyrics.length);
   //console.log('song.lyrics.length: ', song.lyrics.length);
@@ -34,12 +46,15 @@ const getRandomLyrics = (song) => {
     return getRandomLyrics(song);
   }
 
+  const nextLine = getNextSongLyricsLine(song.lyrics, randomTextValue + 1);
+
   return {
     name: song.name,
     text: result,
     album: song.albumName,
     fullLyrics: song.lyrics,
     textIndex: randomTextValue,
+    nextLine,
   };
 };
 
@@ -82,6 +97,7 @@ const startQuiz = (song, answerNumbers = DEFAULT_QUIZ_ANSWERS) => {
   return {
     songName: song.name,
     songText: song.text,
+    nextLine: song.nextLine,
     answers: shuffle(answers),
     repliers: [],
   };
@@ -311,7 +327,10 @@ const getQueryCommands = (bot, localStorage, db) => {
         const markupRecord = await db.getMarkup(quizId);
         const voted = await db.getVotedNumber(quizId);
 
-        const newText = getQuizMessage(markupRecord.songText, voted);
+        const newText = getQuizMessage({
+          songText: markupRecord.songText,
+          votes: voted,
+        });
 
         await bot.editMessageText(newText, {
           chat_id: id,
@@ -363,10 +382,16 @@ const getDate = () => {
   return localISOTime;
 };
 
-const getQuizMessage = (songName, voted = 0) => {
+const getQuizMessage = (props) => {
+  const { songText, votes, nextLine } = props;
+
+  const voted = votes || 0;
+
   return `СТАРТУЕМ:\n
-  <b>${songName}</b>
+  <b>${songText || ''}</b>
   
+  <span class="tg-spoiler"><b>${nextLine}</b></span>
+
   Проголосовал${voted > 1 || voted === 0 ? 'о' : ''}: <i>${voted}</i> ${
     voted > 1 || voted === 0 ? 'человечков' : 'человечек'
   }
