@@ -158,6 +158,7 @@ const getQuizCommand = (bot, dbHandler, localState) => {
           markup,
           text: getQuizMessage({ songText, nextLine }),
           songText,
+          nextLine,
           id,
         };
 
