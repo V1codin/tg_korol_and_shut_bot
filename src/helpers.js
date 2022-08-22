@@ -2,7 +2,7 @@ const lyrics = require('../db/songNames.json');
 
 const MAX_QUIZ_ANSWERS = 25;
 const MIN_QUIZ_ANSWERS = 2;
-const DEFAULT_QUIZ_ANSWERS = 4;
+const DEFAULT_QUIZ_ANSWERS = 7;
 
 const shuffle = (array) => {
   let currentIndex = array.length,
