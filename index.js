@@ -389,11 +389,13 @@ app.listen(PORT, async () => {
   console.log(`The app listening on port ${PORT}`);
 });
 
+/*
+
 setInterval(async () => {
   await request(process.env.APP_LINK);
 }, 300000);
 
-/*
+
 
 bot.on('inline_query', () => {
   console.log('inline_query');
